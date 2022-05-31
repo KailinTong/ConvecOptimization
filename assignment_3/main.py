@@ -2,16 +2,30 @@ import numpy as np
 import imageio
 import matplotlib.pyplot as plt
 import finite_differences as fd
+from numpy import linalg as LA
 
 
-def energy_primal(u):
-    # TODO: implement
-    return 0
+def energy_primal(u:np.ndarray)->float:
+    Du = D @ u
+    Du = np.reshape(6, -1)
+    ep = lamda * np.sum(LA.norm(Du, axis=0)) + 0.5 * LA.norm(u - u_0) ** 2
+    return ep
 
 
-def energy_dual(p):
-    # TODO: implement
-    return 0
+def energy_dual(p:np.ndarray)->float:
+    p_ = p.reshape(6. -1)
+    ig = np.inf
+    if np.all(LA.norm(p_, axis=0) <= lamda):
+        ig = 0
+    ed = 0.5 * LA.norm(D.T @ p) + (D.T @ p) @ u_0 - ig
+    return ed
+
+def projc(z:np.ndarray)->np.ndarray:
+    z_ = z.reshape(6, -1)
+    z_norm = LA.norm(z_, axis=0)
+    coeff = np.clip(lamda / z_norm, None, 1)
+    p = (coeff * z_).T.reshape(-1)
+    return p
 
 
 def pgm():
