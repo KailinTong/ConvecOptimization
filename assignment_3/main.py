@@ -7,17 +7,17 @@ from numpy import linalg as LA
 
 def energy_primal(u:np.ndarray)->float:
     Du = D @ u
-    Du = np.reshape(6, -1)
+    Du = Du.reshape(6, -1)
     ep = lamda * np.sum(LA.norm(Du, axis=0)) + 0.5 * LA.norm(u - u_0) ** 2
     return ep
 
 
 def energy_dual(p:np.ndarray)->float:
-    p_ = p.reshape(6. -1)
+    p_ = p.reshape(6, -1)
     ig = np.inf
     if np.all(LA.norm(p_, axis=0) <= lamda):
         ig = 0
-    ed = 0.5 * LA.norm(D.T @ p) + (D.T @ p) @ u_0 - ig
+    ed = -0.5 * LA.norm(D.T @ p) ** 2 + (D.T @ p) @ u_0 - ig
     return ed
 
 def projc(z:np.ndarray)->np.ndarray:
@@ -29,16 +29,17 @@ def projc(z:np.ndarray)->np.ndarray:
 
 
 def pgm():
-    p = np.zeros((2 * m * n * c,))
+    # p = np.zeros((2 * m * n * c,))
+    p =  0.2 * np.random.randn(2 * m * n * c)
     ep = np.zeros((num_iter,))
     ed = np.zeros((num_iter,))
+    tau = 1 / L
     for i in range(num_iter):
         ep[i] = energy_primal(u_0 - D.T @ p)
         ed[i] = energy_dual(p)
         if i % 10 == 0:
             print(f'{i:4d}: energy={ed[i]:.3f}')
-
-        # TODO: Derive/Implement
+        p = projc(p - tau * D @ D.T @ p)
 
     u_ = (u_0 - D.T @ p).reshape(c, m, n).transpose(1, 2, 0)
     return u_, ep, ed
