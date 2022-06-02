@@ -46,9 +46,17 @@ def pgm():
 
 
 def fista():
-    p = np.zeros((2 * m * n * c,))
+    # p = np.zeros((2 * m * n * c,))
+    p =  0.2 * np.random.randn(2 * m * n * c)
+
     p_old = p.copy()
-    t = 0
+    tau = 1 / L / 2
+    mu_f = 8
+    mu_g = 0
+    mu = mu_f + mu_g
+    q = tau * mu / (1 + tau * mu_g)
+    t_old = 0
+    t = (1 - q * t_old ** 2 + np.sqrt((1 - q * t_old ** 2) ** 2 + 4 * t_old ** 2)) / 2
     ep = np.zeros((num_iter,))
     ed = np.zeros((num_iter,))
     for i in range(num_iter):
@@ -56,8 +64,12 @@ def fista():
         ed[i] = energy_dual(p)
         if i % 10 == 0:
             print(f'{i:4d}: energy={ed[i]:.3f}')
-
-        # TODO: Derive/Implement
+        beta = (t_old - 1) / t * (1 + tau*mu_g - t*tau*mu) / (1 - tau*mu_f)
+        y = p + beta * (p - p_old)
+        p_old = p
+        p = projc(y - tau * D @ D.T @ y)
+        t_old = t
+        t = 1 - q * t_old ** 2 + np.sqrt((1 - q*t_old**2)**2 + 4*t_old**2)
 
     u_ = (u_0 - D.T @ p).reshape(c, m, n).transpose(1, 2, 0)
     return u_, ep, ed
@@ -87,6 +99,8 @@ def visualize(
 
     # TODO: visualize the primal-dual gap
 
+
+
     plt.show()
 
 
@@ -101,7 +115,7 @@ if __name__ == '__main__':
 
     lamda = 0.2
     num_iter = 400
-    u_pgm, ep_pgm, ed_pgm = pgm()
+    # u_pgm, ep_pgm, ed_pgm = pgm()
     u_fista, ep_fista, ed_fista = fista()
     visualize(
         u_0.reshape(c, m, n).transpose(1, 2, 0),
