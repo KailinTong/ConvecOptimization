@@ -108,7 +108,6 @@ def visualize(
     ax[1].legend()
     plt.savefig('energy_lamda_' + str(lamda) + ".png")
 
-    # TODO: visualize the primal-dual gap
     fig, ax = plt.subplots(1, 2)
     ax[0].loglog(ep_pgm - ed_pgm, label='PGM')
     ax[0].grid()
