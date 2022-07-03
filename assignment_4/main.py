@@ -28,7 +28,6 @@ def E(x, lamda):
 
 def step_size() -> Tuple[float, float, float]:
     '''
-    TODO: implement
     You may take any arguments you need
 
     The step size for `z` and `y` are the same, so we return sigma_1 twice
@@ -41,10 +40,8 @@ def step_size() -> Tuple[float, float, float]:
     tau = sigma = 1 / np.sqrt(K_norm_squared)
     return tau, sigma, sigma
 
-
 def step_size_prec() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     '''
-    TODO: implement
     You may take any arguments you need
 
     Here you should return a tuple of ndarrays, representing
@@ -75,6 +72,18 @@ def step_size_prec() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     return tau, sigma_1, sigma_2
 
 
+def projB(p, c):
+    p_r = p.reshape(2 * c, -1)
+    return (lamda * p_r / np.maximum(
+        np.sqrt(np.sum(p_r ** 2, 0, keepdims=True)),
+        lamda
+    )).ravel()
+
+
+def proxNS(p, sigma):
+    return p / (1 + sigma)
+
+
 def pdhg(
     A: utils.AsMatrix,
     D: ss.coo_matrix,
@@ -94,8 +103,15 @@ def pdhg(
         '''
         TODO: implement
         '''
+        next_x = x - tau * (D.T @ y + A.T @ z)
+        next_y = projB(y + sigma_1 * (D @ (2 * next_x - x)), c=1)
+        next_z = proxNS(z + sigma_2 * (A @ (2 * next_x - x) - b), sigma=sigma_2)
 
         energy[i] = E(x, lamda)
+
+        x = next_x
+        y = next_y
+        z = next_z
 
         if i % 10 == 0:
             print(f'{i=:04d}, {energy[i]=:.4f}')
@@ -112,13 +128,17 @@ def visualize(
     _, ax_en = plt.subplots()
     ax_en.loglog(
         energies[0], label='\\( \\tau\\sigma||\\mathcal{K}||^2 < 1 \\)')
+
     ax_en.loglog(
         energies[1], label='Preconditioned')
     ax_en.legend()
+    plt.savefig('energy_lamda_{:.1f}.png'.format(lamda))
+
     _, ax_im = plt.subplots(1, 3)
     ax_im[0].imshow(target)
     ax_im[1].imshow(reconstructions[0])
     ax_im[2].imshow(reconstructions[1])
+    plt.savefig('image_lamda_{:.1f}.png'.format(lamda))
     plt.show()
 
 
@@ -157,8 +177,8 @@ if __name__ == '__main__':
         *b.shape).astype(b.dtype)
     D = fd.D(M, M)
 
-    max_iter = 5
-    lamda = 1.0
+    max_iter = 500
+    lamda = 10.0
     '''
     TODO: call the step size functions with any arguments you need
     '''
