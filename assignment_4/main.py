@@ -9,6 +9,16 @@ from numba import jit
 from pylops.signalprocessing import Radon2D
 import finite_differences as fd
 
+def power_iteration(A: utils.AsMatrix, max_iter: int):
+
+    u = np.random.default_rng().random(M * M).astype(target.dtype)
+    for _ in range(max_iter):
+        u_ = A.T @ (A @ u)
+        u_norm = np.linalg.norm(u_)
+        u = u_ / u_norm
+
+    return u_norm
+
 
 def E(x, lamda):
     return lamda * np.sum(
@@ -24,8 +34,11 @@ def step_size() -> Tuple[float, float, float]:
     The step size for `z` and `y` are the same, so we return sigma_1 twice
     tau and sigma are scalars
     '''
-    tau = 1
-    sigma = 2
+    A_norm_squared = power_iteration(A, 100)
+    D_norm_squared = 8
+    print("A Norm Squared is {} ".format(A_norm_squared))
+    K_norm_squared = A_norm_squared + D_norm_squared
+    tau = sigma = 1 / np.sqrt(K_norm_squared)
     return tau, sigma, sigma
 
 
@@ -39,9 +52,26 @@ def step_size_prec() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         sigma_1: the step sizes for the dual variable y
         sigma_s: the step sizes for the dual variable z
     '''
-    tau = np.ones(M * N)
-    sigma_1 = np.ones(2 * M * N)
-    sigma_2 = np.ones(M * N)
+    tau_example = np.ones(M * N)
+    sigma_1_example = np.ones(2 * M * N)
+    sigma_2_example = np.ones(M * N)
+
+    # K* @ 1 = K.T @ 1  = [D.T,  A.T] @ 1
+    denominator = np.abs(D.T) @ np.ones((D.T.shape[1], 1)) + A.T @ np.ones((M * N, 1))
+    denominator = denominator.squeeze()
+    tau = 1 / ( denominator + 1e-3 )
+
+    # K @ 1 = [D,        [D @ 1,
+    #          A] @ 1 =   A @ 1]
+    denominator = np.abs(D) @ np.ones((M * N, 1))
+    denominator = denominator.squeeze()
+    sigma_1 = 1 / ( denominator + 1e-3 )
+
+    denominator = A @ np.ones((M * N, 1))
+    denominator = denominator.squeeze()
+    sigma_2 = 1 / ( denominator + 1e-3 )
+
+    assert tau_example.shape == tau.shape and sigma_1_example.shape == sigma_1.shape and sigma_2_example.shape == sigma_2.shape
     return tau, sigma_1, sigma_2
 
 
@@ -127,7 +157,7 @@ if __name__ == '__main__':
         *b.shape).astype(b.dtype)
     D = fd.D(M, M)
 
-    max_iter = 500
+    max_iter = 5
     lamda = 1.0
     '''
     TODO: call the step size functions with any arguments you need
